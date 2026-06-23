@@ -1,0 +1,4 @@
+# Python deps for the Vercel serverless function (api/generate.py).
+requests>=2.31,<3
+feedparser>=6.0,<7
+tzdata>=2024.1
