@@ -2,7 +2,7 @@
 
 Two callers, one endpoint (POST /api/generate):
   • Supabase Cron  → header `x-cron-secret: <CRON_SECRET>`, body {"mode":"single"}.
-    Hourly trickle; respects the 8am–midnight Atlanta active window.
+    Trickle; generates only at the Atlanta hours in ACTIVE_HOURS (every 2h, 10am–10pm).
   • "Generate now" → header `Authorization: Bearer <supabase access token>`,
     body {"mode":"spread"}. Verified to belong to OWNER_EMAIL. Ignores the window.
 
@@ -40,8 +40,8 @@ ENABLED_BUCKETS = ["ai", "tech", "markets", "running"]
 KEEP_PER_STORY = {"single": 1, "spread": 2}
 
 ACTIVE_TZ = "America/New_York"
-ACTIVE_START_HOUR = 8
-ACTIVE_END_HOUR = 24
+# Scheduled runs generate only at these Atlanta hours (every 2h, 10am–10pm).
+ACTIVE_HOURS = [10, 12, 14, 16, 18, 20, 22]
 
 PROVIDER = "gemini"
 GEMINI_MODEL = "gemini-2.5-flash"
@@ -467,8 +467,7 @@ def insert_drafts(url, service_key, rows):
 # Selection + validation
 # ===========================================================================
 def within_active_window():
-    hour = datetime.now(ZoneInfo(ACTIVE_TZ)).hour
-    return ACTIVE_START_HOUR <= hour < ACTIVE_END_HOUR
+    return datetime.now(ZoneInfo(ACTIVE_TZ)).hour in ACTIVE_HOURS
 
 
 def normalize(s):
