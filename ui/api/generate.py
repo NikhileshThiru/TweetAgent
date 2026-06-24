@@ -214,10 +214,30 @@ def gather_sources(enabled_buckets):
     return by_bucket
 
 
+# URL fragments that signal a logo / avatar / icon rather than a story image.
+_BAD_IMAGE_HINTS = ("avatar", "favicon", "logo", "sprite", "/icon", "placeholder",
+                    "default-", "1x1", "blank", "spacer", "githubassets")
+
+
+def _is_relevant_image(img):
+    """Keep only real landscape 'hero' images — reject logos, avatars, icons, and
+    tiny or square graphics that 'make no sense' attached to a post."""
+    url = (img.get("url") or "").strip()
+    if not url or any(h in url.lower() for h in _BAD_IMAGE_HINTS):
+        return False
+    w, h = img.get("width") or 0, img.get("height") or 0
+    if not (w and h):
+        return False                       # unknown dimensions → too risky, skip
+    if w < 600 or h < 315:
+        return False                       # too small to be a story photo
+    ratio = w / h
+    return 1.2 <= ratio <= 2.6             # landscape-ish; excludes square logos
+
+
 def fetch_preview_image(article_url):
-    """Resolve an article via Microlink (handles Google News redirects) and
-    return its social preview image URL, or '' if none / on failure. Fail-soft —
-    a missing image must never break draft generation. An optional
+    """Resolve an article via Microlink (handles Google News redirects) and return
+    its preview image URL ONLY if it's a relevant content image (not a logo/avatar/
+    icon). Returns '' otherwise. Fail-soft — never breaks generation. An optional
     MICROLINK_API_KEY raises the free 50/day rate limit."""
     if not article_url:
         return ""
@@ -233,8 +253,8 @@ def fetch_preview_image(article_url):
             timeout=8,  # bounded so several lookups can't exceed the function's 60s limit
         )
         if r.ok:
-            data = (r.json() or {}).get("data") or {}
-            return ((data.get("image") or {}).get("url") or "").strip()
+            img = ((r.json() or {}).get("data") or {}).get("image") or {}
+            return (img.get("url") or "").strip() if _is_relevant_image(img) else ""
         log(f"  [microlink] {r.status_code} for {article_url[:60]}")
     except Exception as e:
         log(f"  [microlink] SKIPPED ({type(e).__name__}: {e})")
