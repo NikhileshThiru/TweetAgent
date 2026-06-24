@@ -15,14 +15,14 @@ entirely on free tiers with **no server to manage**.
 ## How it works
 
 ```
-Supabase Cron (hourly, free)        ──POST {mode:single}─┐
+Supabase Cron (scheduled, free)     ──POST {mode:single}─┐
 "Generate now" button (your login)  ──POST {mode:spread}─┤
                                                          ▼
                               Vercel Python function  (api/generate.py)
                                 1. fetch fresh news (HN, Google News, MarketWatch, CNBC)
                                 2. load your taste signals (approved / trashed / notes / steering)
                                 3. pick stories → Gemini writes takes → keep all that pass validation
-                                4. enrich each draft with the article's preview image (Microlink)
+                                4. attach a relevant article photo when one exists (Microlink)
                                                          │
                                                          ▼
                                        Supabase  tweet_drafts  (Postgres + RLS)
@@ -40,9 +40,10 @@ Supabase Cron (hourly, free)        ──POST {mode:single}─┐
 - **Fail-soft ingestion.** Each news source is independent: if a feed is down,
   rate-limited, or malformed, it's skipped with a log line instead of crashing the
   run. Hacker News + Google News carry the load when Reddit blocks datacenter IPs.
-- **Rich previews.** Each draft is enriched with the source article's preview image
-  via **Microlink** — which resolves Google News redirect links to the real article —
-  so you can attach a relevant visual when you post. Fetched once per story, fail-soft.
+- **Rich previews, filtered.** Each draft is enriched with the source article's
+  preview image via **Microlink** (which resolves Google News redirect links to the
+  real article), then **filtered by dimensions and aspect ratio** to keep only real
+  story photos — never logos, avatars, or icons. Fetched once per story, fail-soft.
 - **A feedback loop that learns your voice.** Approvals become "write more like
   these," trashes become "avoid these," in-card edits teach exact phrasing, and a
   persistent **Steering** field holds standing rules ("never tweet about crypto").
@@ -60,6 +61,8 @@ Supabase Cron (hourly, free)        ──POST {mode:single}─┐
   disabled on the model since it only adds latency to short-form writing.
 - **Provider-abstracted.** Swap Gemini for Groq by changing one constant — the
   REST calls are written by hand (no SDKs) so a dependency bump can't break the cron.
+
+![Steering — persistent rules applied to every generation](docs/steering.png)
 
 ## Notable design decisions
 
@@ -90,9 +93,10 @@ Import the repo, set **Root Directory = `ui`**, and add the env vars from
 random `CRON_SECRET`, and an optional `AUTHOR_PROFILE` describing whose voice to
 write in). Set the Supabase auth redirect to your Vercel domain.
 
-### 3. Schedule the hourly trickle
+### 3. Schedule generation
 Fill your domain + `CRON_SECRET` into [`supabase/cron.sql`](supabase/cron.sql) and
-run it — that's the `pg_cron` job that calls the function each hour.
+run it — a `pg_cron` job calls the function on a schedule (the function gates to its
+active hours in code, so daylight saving needs no maintenance).
 
 Local generator testing (no deploy needed):
 ```bash
@@ -109,5 +113,9 @@ ui/src/                React + Vite review UI (auth, tabs, inline edit, steering
 ui/requirements.txt    Python deps for the function
 supabase/schema.sql    tables + RLS + indexes
 supabase/settings.sql  steering store
-supabase/cron.sql      hourly pg_cron job
+supabase/cron.sql      scheduled pg_cron job
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE).
