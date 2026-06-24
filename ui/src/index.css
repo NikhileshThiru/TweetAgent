@@ -266,6 +266,24 @@ textarea:focus {
 .edit.over {
   border-color: var(--bad);
 }
+.preview {
+  display: block;
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  line-height: 0;
+}
+.preview img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.12s ease;
+}
+.preview:hover img {
+  opacity: 0.86;
+}
 .card-meta {
   display: flex;
   justify-content: space-between;

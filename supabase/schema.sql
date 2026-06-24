@@ -21,6 +21,7 @@ create table if not exists public.tweet_drafts (
   topic_hint  text,                                   -- which angle the LLM was nudged toward
   model       text,                                   -- e.g. 'gemini-2.5-flash' — lets you A/B providers
   feedback    text,                                   -- your per-draft note; fed back into future prompts
+  image_url   text,                                   -- article preview image (via Microlink) to attach when posting
 
   -- char_count is computed by the DB so the UI can show "X / 280" with no client logic.
   char_count  int generated always as (char_length(text)) stored,
@@ -29,8 +30,9 @@ create table if not exists public.tweet_drafts (
   updated_at  timestamptz not null default now()
 );
 
--- For anyone who created the table before the feedback column existed:
+-- For anyone who created the table before these columns existed:
 alter table public.tweet_drafts add column if not exists feedback text;
+alter table public.tweet_drafts add column if not exists image_url text;
 
 -- Fast lookups for the three tabs and for "fetch my last N drafts" (dedup context).
 create index if not exists tweet_drafts_status_created_idx

@@ -79,6 +79,12 @@ export function DraftCard({ draft, onStatus, onUpdateText, onFeedback, onRemove 
         <p className="tweet">{draft.text}</p>
       )}
 
+      {!editing && draft.image_url && (
+        <a className="preview" href={draft.image_url} target="_blank" rel="noreferrer" title="Open full image to save / attach">
+          <img src={draft.image_url} alt="" loading="lazy" />
+        </a>
+      )}
+
       <div className="card-meta">
         <span className={`count ${over ? 'over' : warn ? 'warn' : ''}`}>
           {count} / {MAX}

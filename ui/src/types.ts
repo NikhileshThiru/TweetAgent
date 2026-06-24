@@ -7,6 +7,7 @@ export interface Draft {
   topic_hint: string | null;
   model: string | null;
   feedback: string | null;
+  image_url: string | null;
   char_count: number;
   created_at: string;
   updated_at: string;

@@ -214,6 +214,33 @@ def gather_sources(enabled_buckets):
     return by_bucket
 
 
+def fetch_preview_image(article_url):
+    """Resolve an article via Microlink (handles Google News redirects) and
+    return its social preview image URL, or '' if none / on failure. Fail-soft —
+    a missing image must never break draft generation. An optional
+    MICROLINK_API_KEY raises the free 50/day rate limit."""
+    if not article_url:
+        return ""
+    headers = {"User-Agent": UA}
+    key = os.environ.get("MICROLINK_API_KEY", "").strip()
+    if key:
+        headers["x-api-key"] = key
+    try:
+        r = requests.get(
+            "https://api.microlink.io/",
+            params={"url": article_url},
+            headers=headers,
+            timeout=8,  # bounded so several lookups can't exceed the function's 60s limit
+        )
+        if r.ok:
+            data = (r.json() or {}).get("data") or {}
+            return ((data.get("image") or {}).get("url") or "").strip()
+        log(f"  [microlink] {r.status_code} for {article_url[:60]}")
+    except Exception as e:
+        log(f"  [microlink] SKIPPED ({type(e).__name__}: {e})")
+    return ""
+
+
 # ===========================================================================
 # Prompt (the voice)
 # ===========================================================================
@@ -604,10 +631,13 @@ def run_generation(mode="single", respect_window=False, dry_run=False):
             print(f"\n--> would save {len(kept)}: " + (" || ".join(kept) if kept else "(none)"))
             continue
 
+        # One preview-image lookup per story (only when it produced a draft).
+        image_url = fetch_preview_image(item["url"]) if kept else ""
         topic_hint = f"{item['source']}: {item['title']} | {item['url']}"
         for text in kept:
             rows.append({"text": text, "topic_hint": topic_hint,
-                         "model": model_tag, "status": "pending"})
+                         "model": model_tag, "status": "pending",
+                         "image_url": image_url or None})
 
     if dry_run:
         return {"status": "ok", "mode": mode, "dry_run": True, "stories": len(stories)}

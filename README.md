@@ -22,6 +22,7 @@ Supabase Cron (hourly, free)        ──POST {mode:single}─┐
                                 1. fetch fresh news (HN, Google News, MarketWatch, CNBC)
                                 2. load your taste signals (approved / trashed / notes / steering)
                                 3. pick stories → Gemini writes takes → keep all that pass validation
+                                4. enrich each draft with the article's preview image (Microlink)
                                                          │
                                                          ▼
                                        Supabase  tweet_drafts  (Postgres + RLS)
@@ -39,6 +40,9 @@ Supabase Cron (hourly, free)        ──POST {mode:single}─┐
 - **Fail-soft ingestion.** Each news source is independent: if a feed is down,
   rate-limited, or malformed, it's skipped with a log line instead of crashing the
   run. Hacker News + Google News carry the load when Reddit blocks datacenter IPs.
+- **Rich previews.** Each draft is enriched with the source article's preview image
+  via **Microlink** — which resolves Google News redirect links to the real article —
+  so you can attach a relevant visual when you post. Fetched once per story, fail-soft.
 - **A feedback loop that learns your voice.** Approvals become "write more like
   these," trashes become "avoid these," in-card edits teach exact phrasing, and a
   persistent **Steering** field holds standing rules ("never tweet about crypto").
