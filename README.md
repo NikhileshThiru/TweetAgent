@@ -114,7 +114,15 @@ ui/requirements.txt    Python deps for the function
 supabase/schema.sql    tables + RLS + indexes
 supabase/settings.sql  steering store
 supabase/cron.sql      scheduled pg_cron job
+tests/test_generate.py unit tests for the pure logic (pytest)
 ```
+
+## Tests
+```bash
+pip install -r ui/requirements.txt pytest && pytest
+```
+24 unit tests covering candidate validation, dedup, topic routing, the image-relevance
+filter, and prompt assembly — all pure logic, no network or API keys required.
 
 ## License
 
