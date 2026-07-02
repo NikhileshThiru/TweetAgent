@@ -1,14 +1,16 @@
-# Secrets
+# Secrets / personal
 .env
 .env.*
 !.env.example
 ui/.env.local
+CLAUDE.md
 
 # Python
 __pycache__/
 *.pyc
 .venv/
 venv/
+.pytest_cache/
 
 # Node / Vite
 node_modules/

@@ -14,8 +14,9 @@ create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
 -- pg_cron runs in UTC and fires every hour at :00. The function itself only
--- generates during 8am–midnight Atlanta time (DST-aware) and exits instantly
--- otherwise, so scheduling 24x/day is fine — off-hours calls are ~free no-ops.
+-- generates at its scheduled Atlanta hours (every 2h, 10am–10pm, DST-aware —
+-- see ACTIVE_HOURS in ui/api/generate.py) and exits instantly otherwise, so
+-- scheduling 24x/day is fine — off-hours calls are ~free no-ops.
 select cron.schedule(
   'tweet-drafts-hourly',
   '0 * * * *',

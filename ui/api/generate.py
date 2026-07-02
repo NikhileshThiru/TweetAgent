@@ -45,7 +45,7 @@ ACTIVE_HOURS = [10, 12, 14, 16, 18, 20, 22]
 
 PROVIDER = "gemini"
 GEMINI_MODEL = "gemini-2.5-flash"
-GROQ_MODEL = "llama-4-scout-17b-16e-instruct"
+GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 MAX_TWEET_CHARS = 280
 RECENT_FETCH_LIMIT = 60
@@ -535,9 +535,18 @@ def _fresh_items(items, recent, exclude=()):
             if not already_used(it, recent) and not (it["url"] and it["url"] in used_urls)]
 
 
+def _rotation_start(n, ts=None):
+    """Index of the bucket that gets first pick this run. Advances once per
+    two-hour slot — the cron cadence — so successive scheduled runs cycle
+    through every bucket. (Rotating by hour-of-day % n aliases on an every-2h
+    schedule: the hour parity never changes, so only two of four buckets would
+    ever go first.)"""
+    return int((time.time() if ts is None else ts) // 7200) % n
+
+
 def choose_item(by_bucket, recent, shuffle=False):
     order = list(ENABLED_BUCKETS)
-    start = datetime.now(timezone.utc).hour % len(order)
+    start = _rotation_start(len(order))
     rotated = order[start:] + order[:start]
     if shuffle:
         random.shuffle(rotated)

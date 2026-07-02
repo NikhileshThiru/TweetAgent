@@ -67,8 +67,8 @@ create trigger tweet_drafts_set_updated_at
 -- ONLY thing standing between your drafts and anyone who finds the URL.
 --
 -- Model:
---   • The cron (Python) uses the SERVICE ROLE key, which bypasses RLS entirely,
---     so inserts from GitHub Actions always work regardless of these policies.
+--   • The generator function uses the SERVICE ROLE key, which bypasses RLS
+--     entirely, so its inserts always work regardless of these policies.
 --   • The UI uses the ANON key + a magic-link session. The policy below grants
 --     access ONLY to a logged-in user whose email matches yours. Anyone else can
 --     sign in with their own email but the policy returns zero rows for them and

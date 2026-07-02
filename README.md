@@ -1,12 +1,25 @@
-# Tweet Draft Generator
+# TweetAgent
 
-A personal AI writing assistant that reacts to **real, current news** in your
-interest areas and drafts tweets in your voice. You review the drafts in a clean
-web UI — approve, edit, trash — and the system learns your taste over time. Runs
-entirely on free tiers with **no server to manage**.
+**An AI writing assistant that reacts to real, current news and drafts tweets in your voice — with a review UI that learns your taste over time.**
 
-> **Stack:** React + TypeScript (Vite) · Python serverless function · Supabase
-> (Postgres + Auth + Cron) · Gemini 2.5 Flash · deployed on Vercel.
+![Python](https://img.shields.io/badge/Python-serverless_function-3776AB?logo=python&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-React_18_+_Vite-3178C6?logo=typescript&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres_·_Auth_·_Cron-3FCF8E?logo=supabase&logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini-2.5_Flash-4285F4?logo=googlegemini&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-deployed-000000?logo=vercel&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-28_passing-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
+Every couple of hours it fetches what's actually happening (Hacker News, Google
+News, market feeds), has an LLM write sharp takes on the freshest stories, and
+queues them in a web UI where you approve, edit, or trash each one. Approvals,
+edits, and standing rules feed back into every future prompt — so the drafts
+keep getting closer to something you'd actually post. Runs entirely on free
+tiers with **no server to manage**.
+
+**Live:** [tweet-agent-ten.vercel.app](https://tweet-agent-ten.vercel.app) —
+the sign-in page is public; the data behind it is Row-Level-Security-locked to
+the owner.
 
 ![Tweet Drafts — the review interface](docs/screenshot.png)
 
@@ -37,17 +50,21 @@ Supabase Cron (scheduled, free)     ──POST {mode:single}─┐
   or staleify news. Instead, every draft reacts to a *real* item fetched seconds
   earlier from multiple sources, with a **hard 30-hour freshness cap** and
   newest-first ranking — so drafts are always about what's actually happening now.
-- **Fail-soft ingestion.** Each news source is independent: if a feed is down,
-  rate-limited, or malformed, it's skipped with a log line instead of crashing the
-  run. Hacker News + Google News carry the load when Reddit blocks datacenter IPs.
-- **Rich previews, filtered.** Each draft is enriched with the source article's
-  preview image via **Microlink** (which resolves Google News redirect links to the
-  real article), then **filtered by dimensions and aspect ratio** to keep only real
-  story photos — never logos, avatars, or icons. Fetched once per story, fail-soft.
 - **A feedback loop that learns your voice.** Approvals become "write more like
   these," trashes become "avoid these," in-card edits teach exact phrasing, and a
   persistent **Steering** field holds standing rules ("never tweet about crypto").
   All injected into the prompt — in-context learning, no fine-tuning required.
+- **Fail-soft ingestion.** Each news source is independent: if a feed is down,
+  rate-limited, or malformed, it's skipped with a log line instead of crashing the
+  run. Hacker News + Google News carry the load when Reddit blocks datacenter IPs.
+- **Layered output validation.** Model output is JSON-schema-constrained, then
+  every candidate is re-checked in code: length bounds, an emoji blacklist, and
+  fuzzy near-duplicate detection (`difflib` similarity against recent drafts and
+  the current batch) so the same take never shows up twice.
+- **Rich previews, filtered.** Each draft is enriched with the source article's
+  preview image via **Microlink** (which resolves Google News redirect links to the
+  real article), then **filtered by dimensions and aspect ratio** to keep only real
+  story photos — never logos, avatars, or icons. Fetched once per story, fail-soft.
 - **Serverless and free.** No always-on process: generation is a Vercel Python
   function triggered by Supabase Cron (scheduled) and the UI button (on-demand,
   synchronous so drafts appear in ~10s). Gemini's free tier covers the volume.
@@ -73,6 +90,10 @@ Supabase Cron (scheduled, free)     ──POST {mode:single}─┐
 - **DST handled in code, not the schedule.** The cron fires hourly in UTC; the
   function gates to the author's local waking hours using a timezone-aware clock,
   so daylight saving never requires touching the schedule.
+- **Topic fairness on a slotted clock.** Scheduled runs rotate which topic gets
+  first pick. The rotation advances per two-hour cron slot rather than by
+  hour-of-day — the naive version aliases on an every-2h schedule and would
+  starve half the topics (caught, fixed, and pinned with a regression test).
 - **Human-in-the-loop, not auto-post.** The system drafts; the person decides. It
   never posts to X — it produces a review queue, which is both safer and the source
   of the training signal.
@@ -121,8 +142,9 @@ tests/test_generate.py unit tests for the pure logic (pytest)
 ```bash
 pip install -r ui/requirements.txt pytest && pytest
 ```
-24 unit tests covering candidate validation, dedup, topic routing, the image-relevance
-filter, and prompt assembly — all pure logic, no network or API keys required.
+28 unit tests covering candidate validation, dedup, topic routing and rotation,
+the image-relevance filter, taste-signal assembly, and prompt construction — all
+pure logic, no network or API keys required.
 
 ## License
 

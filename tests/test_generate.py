@@ -106,6 +106,12 @@ def test_already_used_matches_url():
     assert g.already_used(_item("Other", "https://x.com/a"), recent)
 
 
+def test_already_used_matches_title_across_sources():
+    # Same story syndicated under a different URL must still count as used.
+    recent = [{"topic_hint": "Test: Big AI News Today | https://x.com/a", "text": "t"}]
+    assert g.already_used(_item("Big AI News Today", "https://y.com/b"), recent)
+
+
 def test_already_used_false_when_new():
     recent = [{"topic_hint": "Test: Headline | https://x.com/a", "text": "t"}]
     assert not g.already_used(_item("Fresh", "https://x.com/b"), recent)
@@ -122,6 +128,31 @@ def test_choose_spread_one_per_bucket():
     by = {b: [_item(b.upper(), "u-" + b, b)] for b in g.ENABLED_BUCKETS}
     spread = g.choose_spread(by, [])
     assert {s["bucket"] for s in spread} == set(g.ENABLED_BUCKETS)
+
+
+def test_rotation_cycles_every_bucket():
+    # One run per 2h cron slot must give every bucket a turn at first pick.
+    # (Regression: rotating by hour-of-day % n aliases on an every-2h schedule
+    # and only ever landed on two of the four buckets.)
+    n = len(g.ENABLED_BUCKETS)
+    starts = {g._rotation_start(n, ts=slot * 7200) for slot in range(n)}
+    assert starts == set(range(n))
+
+
+# --- taste signals -----------------------------------------------------------
+def test_taste_block_includes_all_sections():
+    taste = {"steering": "no crypto", "notes": ["shorter"],
+             "liked": ["good one"], "disliked": ["bad one"]}
+    block = g._taste_block(taste)
+    assert "STANDING INSTRUCTIONS" in block and "no crypto" in block
+    assert "MY RECENT FEEDBACK" in block and "- shorter" in block
+    assert "TWEETS I APPROVED" in block and "- good one" in block
+    assert "TWEETS I TRASHED" in block and "- bad one" in block
+
+
+def test_taste_block_empty_when_no_signals():
+    assert g._taste_block({}) == ""
+    assert g._taste_block(None) == ""
 
 
 # --- prompt assembly -------------------------------------------------------

@@ -44,7 +44,20 @@ export function DraftCard({ draft, onStatus, onUpdateText, onFeedback, onRemove 
   const warn = count > 240 && count <= MAX;
 
   async function copy() {
-    await navigator.clipboard.writeText(draft.text);
+    try {
+      await navigator.clipboard.writeText(draft.text);
+    } catch {
+      // Clipboard API can be unavailable (older mobile browsers, non-secure
+      // contexts) — fall back to the classic hidden-textarea copy.
+      const ta = document.createElement('textarea');
+      ta.value = draft.text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
